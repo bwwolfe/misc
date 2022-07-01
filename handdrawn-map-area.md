@@ -14,6 +14,13 @@ conversion from pixels to whatever units of area.
 Also, this works if the map can be considered planar (i.e, it explicitly
 is or if not the extent is small enough the error will be negligible)
 
+
+``` r
+library(imager)
+library(scales)
+library(Momocs)
+```
+
 \####First load this beautiful hand drawn map:
 
 ``` r
