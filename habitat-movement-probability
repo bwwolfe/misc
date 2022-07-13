@@ -1,0 +1,78 @@
+#habitat patch transition probability map example
+
+library(tidyr)
+library(ggplot2)
+
+#setting the random seed for reproducibility
+set.seed(22)
+
+#number of patches
+n <- 5
+
+#make random patch locations
+x <- runif(n, 0, 200)
+y <- runif(n, 0, 200)
+patch_locations <-
+  data.frame(patch = 1:n, x = x, y = y)
+
+#make random patch transition probabilities
+
+#all possible patch connections
+v <- t(combn(1:n, m = 2))
+
+movement_probs <-
+  setNames(data.frame(v, runif(nrow(v), 0.1, 1.0), 1:nrow(v)),
+           c("a", "b", "probability", "group"))
+
+#movement probs in long format for plotting
+probs_long <-
+  pivot_longer(movement_probs, cols = c(a, b), values_to = "patch")
+
+#merge locations and probability for plotting
+data <- merge(probs_long, patch_locations, by = "patch")
+
+#make some habitat patch boundaries
+#function to make random convex polygons in the location of patches
+convex.poly <- function(nSides, area, patch)
+{
+  radius <- sqrt((2 * area) / (nSides * sin((2 * pi) / nSides)))
+  angle <- (2 * pi) / nSides
+  radii <- rnorm(nSides, radius, radius / 10)
+  angles <- rnorm(nSides, angle, angle / 10) * 1:nSides
+  angles <- sort(angles)
+  points <- list(patch = NULL, x = NULL, y = NULL)
+  points$x <- cos(angles) * radii
+  points$y <- sin(angles) * radii
+  m <- matrix(unlist(points), ncol = 2)
+  m <- rbind(m, m[1,])
+  current.area <-
+    0.5 * (sum(m[1:nSides, 1] * m[2:(nSides + 1), 2]) - sum(m[1:nSides, 2] *
+                                                              m[2:(nSides + 1), 1]))
+  points$patch <- rep(patch[1], nSides)
+  points$x <- points$x * sqrt(area / current.area) + patch[2]
+  points$y <- points$y * sqrt(area / current.area) + patch[3]
+  return (as.data.frame(do.call("cbind", points)))
+}
+#create the patch boundaries for each patch with random number of sides and random area
+patch_boundaries <-
+  do.call("rbind",
+          apply(patch_locations, 1, \(x) {
+            convex.poly(floor(runif(1, 7, 14)), runif(1, 100, 800), x)
+          }))
+
+#plot
+ggplot(data, aes(x, y)) +
+  geom_polygon(
+    data = patch_boundaries,
+    aes(x, y, group = patch, fill = factor(patch)),
+    colour = NA,
+    alpha = 0.75,
+    show.legend = FALSE
+  ) +
+  geom_path(aes(group = group, size = probability),
+            colour = "grey50") +
+  geom_point(size = 5) + geom_text(aes(label = paste("Patch", patch)), nudge_y =
+                                     5) +
+  
+  scale_size_binned("p(Movement)", range = c(0.5, 3), n.breaks = 6) +
+  scale_fill_brewer(palette = "Dark2")
