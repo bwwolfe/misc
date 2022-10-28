@@ -1,0 +1,49 @@
+#exploring package ecotraj trajectory divergence Mann Kendall test
+
+library(ggplot2)
+library(ecotraj)
+library(Kendall)
+
+# from the ecotraj vignette
+sites = c(1,1,1,1,2,2,2,2,3,3,3,3)
+surveys=c(1,2,3,4,1,2,3,4,1,2,3,4)
+xy<-matrix(0, nrow=12, ncol=2)
+xy[2,2]<-1
+xy[3,2]<-2
+xy[4,2]<-3
+xy[5:6,2] <- xy[1:2,2]
+xy[7,2]<-1.5
+xy[8,2]<-2.0
+xy[5:6,1] <- 0.25
+xy[7,1]<-0.5
+xy[8,1]<-1.0
+xy[9:10,1] <- xy[5:6,1]+0.25
+xy[11,1] <- 1.0
+xy[12,1] <-1.5
+xy[9:10,2] <- xy[5:6,2]
+xy[11:12,2]<-c(1.25,1.0)
+
+trajs <- data.frame(sites,surveys,xy)
+trajs <- setNames(trajs, c("traj","pt","x","y"))
+
+ggplot(trajs, aes(x,y, colour = factor(traj))) + geom_line(arrow = arrow()) +
+  scale_colour_manual(values = c("black","red","blue"))
+
+d <- dist(trajs[, c("x","y")])
+
+trajectory = 1:4
+target = 5:8
+target2 = 9:12
+
+trajProj = trajectoryProjection(d, target, trajectory)
+dT = trajProj$distanceToTrajectory
+dT[4] <- 100
+MannKendall(dT)
+
+trajProj2 = trajectoryProjection(d,target2, trajectory)
+dT2 = trajProj2$distanceToTrajectory
+MannKendall(dT2)
+
+trajProj3 = trajectoryProjection(d,target2, target)
+dT3 = trajProj3$distanceToTrajectory
+MannKendall(dT3)
